@@ -1,16 +1,10 @@
 from openai import OpenAI
-import time
 from notion_client import Client
 import os
-import openai
 from pdf2image import convert_from_path
-import pyimgur
-from PyPDF2 import PdfReader
-import re
-import PyPDF2
 import json
-import pdftotext
 import ast
+import boto3
 import tiktoken
 from collections import defaultdict
 from config import (
@@ -19,7 +13,28 @@ from config import (
     NOTION_PAGE_ID,
     IMGUR_CLIENT_ID,
     PDF_PATH,
+    AWS_ACCESS_KEY,
+    AWS_SECRET_KEY,
 )
+
+
+def generate_presigned_url(file_name):
+    try:
+        response = s3_client.generate_presigned_post(
+            Bucket="notion-ppt", Key=file_name, ExpiresIn=3600
+        )
+        return response
+    except Exception as e:
+        print(f"Error generating presigned URL: {str(e)}")
+        return None
+
+
+s3_client = boto3.client(
+    "s3",
+    aws_access_key_id=AWS_ACCESS_KEY,
+    aws_secret_access_key=AWS_SECRET_KEY,
+)
+
 
 client = OpenAI(api_key=OPENAI_API_KEY)
 
@@ -106,7 +121,7 @@ def convert_pdf_and_upload_to_notion(
 ):
     # Initialize clients
     notion = Client(auth=notion_token)
-    imgur = pyimgur.Imgur(imgur_client_id)
+    # imgur = pyimgur.Imgur(imgur_client_id)
 
     # Get slide titles
     print("Extracting titles from PDF...")
@@ -148,13 +163,19 @@ def convert_pdf_and_upload_to_notion(
             for i, page in slides:
                 image_path = f"{temp_dir}/slide_{i+1}.png"
                 page.save(image_path, "PNG")
-
                 try:
-                    # Upload to Imgur
-                    uploaded_image = imgur.upload_image(
-                        image_path, title=f"Slide {i+1}"
+                    # Upload to S3
+                    s3_key = f"slides/slide_{i+1}.png"
+                    s3_client.upload_file(
+                        image_path, "notion-ppt", s3_key  # your bucket name
                     )
-                    image_url = uploaded_image.link
+
+                    # Generate a URL for the uploaded image
+                    url = s3_client.generate_presigned_url(
+                        "get_object",
+                        Params={"Bucket": "notion-ppt", "Key": s3_key},
+                        ExpiresIn=3600 * 24 * 7,  # URL valid for 7 days
+                    )
 
                     # Add image to toggle block
                     toggle_block["children"][0]["toggle"]["children"].append(
@@ -163,10 +184,28 @@ def convert_pdf_and_upload_to_notion(
                             "type": "image",
                             "image": {
                                 "type": "external",
-                                "external": {"url": image_url},
+                                "external": {"url": url},
                             },
                         }
                     )
+                # try:
+                #     # Upload to Imgur
+                #     uploaded_image = imgur.upload_image(
+                #         image_path, title=f"Slide {i+1}"
+                #     )
+                #     image_url = uploaded_image.link
+
+                #     # Add image to toggle block
+                #     toggle_block["children"][0]["toggle"]["children"].append(
+                #         {
+                #             "object": "block",
+                #             "type": "image",
+                #             "image": {
+                #                 "type": "external",
+                #                 "external": {"url": image_url},
+                #             },
+                #         }
+                #     )
 
                 except Exception as e:
                     print(f"Error processing slide {i+1}: {str(e)}")
