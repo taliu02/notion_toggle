@@ -21,36 +21,6 @@ export default function FileUpload() {
     },
     multiple: false,
   });
-
-  // const handleUpload = async () => {
-  //   if (!file) return;
-
-  //   try {
-  //     // First convert PPT to PDF
-
-  //     const converter = Converter.create({
-  //       file: URL.createObjectURL(file),
-  //       output: "/tmp/", // Temporary output directory
-  //     });
-
-  //     const pdfResult = await converter.convertPptToPdf();
-
-  //     // Create FormData with converted PDF
-  //     const formData = new FormData();
-  //     formData.append("file", pdfResult); // Append the converted PDF
-
-  //     // Upload to your API
-  //     const response = await fetch("/api/upload", {
-  //       method: "POST",
-  //       body: formData,
-  //     });
-  //     const data = await response.json();
-  //     console.log(data);
-  //   } catch (error) {
-  //     console.error("Error during conversion or upload:", error);
-  //   }
-  // };
-
   const handleUpload = async () => {
     if (!file) return;
 

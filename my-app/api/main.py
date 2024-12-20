@@ -6,7 +6,6 @@ import json
 import ast
 import boto3
 import tiktoken
-import pyimgur
 from collections import defaultdict
 from config import (
     NOTION_TOKEN,
@@ -122,7 +121,6 @@ def convert_pdf_and_upload_to_notion(
 ):
     # Initialize clients
     notion = Client(auth=notion_token)
-    imgur = pyimgur.Imgur(imgur_client_id)
 
     # Get slide titles
     print("Extracting titles from PDF...")
@@ -189,24 +187,6 @@ def convert_pdf_and_upload_to_notion(
                             },
                         }
                     )
-                # try:
-                #     # Upload to Imgur
-                #     uploaded_image = imgur.upload_image(
-                #         image_path, title=f"Slide {i+1}"
-                #     )
-                #     image_url = uploaded_image.link
-
-                #     # Add image to toggle block
-                #     toggle_block["children"][0]["toggle"]["children"].append(
-                #         {
-                #             "object": "block",
-                #             "type": "image",
-                #             "image": {
-                #                 "type": "external",
-                #                 "external": {"url": image_url},
-                #             },
-                #         }
-                #     )
 
                 except Exception as e:
                     print(f"Error processing slide {i+1}: {str(e)}")
